@@ -50,15 +50,14 @@ main(void)
   Simulation_Run_Ptr simulation_run;
   Simulation_Run_Data data;
    FILE *fpt;
-  fpt =fopen("P2_1990.csv", "w+");
-  fprintf(fpt, "SEED, Arrival Count, Transmitted Packet Count, Service Fraction, Arrival Rate, Mean Delay\n");
+  fpt =fopen("P3_403.csv", "w+");
+  fprintf(fpt, "SEED, Arrival Count, Transmitted Packet Count, Service Fraction, Arrival Rate, Mean Delay, #exceed20msec, P(D>20msec)\n");
   /*
    * Declare and initialize our random number generator seeds defined in
    * simparameters.h
    */
 
   unsigned RANDOM_SEEDS[] = {RANDOM_SEED_LIST, 0};
-  int ARRIVAL_RATES[] = {PACKET_ARRIVAL_RATE, 0};
   unsigned random_seed;
   int j=0;
 
@@ -86,6 +85,7 @@ main(void)
     data.number_of_packets_processed = 0;
     data.accumulated_delay = 0.0;
     data.random_seed = random_seed;
+    data.number_exceed_20msec = 0;
  
     /* 
      * Create the packet buffer and transmission link, declared in main.h.
@@ -124,12 +124,15 @@ main(void)
     Simulation_Run_Data_Ptr sim_data = (Simulation_Run_Data_Ptr) simulation_run_data(simulation_run);
     double xmtted_fraction = (double) sim_data->number_of_packets_processed /
         sim_data->arrival_count;
-    fprintf(fpt,"%d, %ld, %ld, %.5f,%.3f,%.2f\n", sim_data-> random_seed,
+    double exceed_fraction = (double) sim_data->number_exceed_20msec/sim_data->number_of_packets_processed;
+    fprintf(fpt,"%d, %ld, %ld, %.5f,%.3f,%.2f, %ld, %.5f\n", sim_data-> random_seed,
                                             sim_data->arrival_count,
                                             sim_data->number_of_packets_processed,
                                             xmtted_fraction,
                                             (double) PACKET_ARRIVAL_RATE,
-                                            1e3*sim_data->accumulated_delay/sim_data->number_of_packets_processed);
+                                            1e3*sim_data->accumulated_delay/sim_data->number_of_packets_processed,
+                                            sim_data->number_exceed_20msec,
+                                            exceed_fraction);
 
     cleanup_memory(simulation_run);
   }

@@ -41,6 +41,7 @@ typedef struct _simulation_run_data_
   long int arrival_count;
   long int number_of_packets_processed;
   double accumulated_delay;
+  long int number_exceed_20msec;
   unsigned random_seed;
 } Simulation_Run_Data, * Simulation_Run_Data_Ptr;
 

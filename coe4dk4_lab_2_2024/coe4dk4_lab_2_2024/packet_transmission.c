@@ -79,8 +79,13 @@ end_packet_transmission_event(Simulation_Run_Ptr simulation_run, void * link)
 
   /* Collect statistics. */
   data->number_of_packets_processed++;
-  data->accumulated_delay += simulation_run_get_time(simulation_run) - 
+
+    //Check if delay exceeds 20msec, if yes increment the count to determine probability
+  double delay = simulation_run_get_time(simulation_run) - 
     this_packet->arrive_time;
+    if(1e3*delay>20) data->number_exceed_20msec++;
+
+  data->accumulated_delay += delay;
 
   /* Output activity blip every so often. */
   output_progress_msg_to_screen(simulation_run);
