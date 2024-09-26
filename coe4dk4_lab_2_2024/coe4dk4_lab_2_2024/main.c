@@ -49,9 +49,9 @@ main(void)
 {
   Simulation_Run_Ptr simulation_run;
   Simulation_Run_Data data;
-   FILE *fpt;
-  fpt =fopen("P3_403.csv", "w+");
-  fprintf(fpt, "SEED, Arrival Count, Transmitted Packet Count, Service Fraction, Arrival Rate, Mean Delay, #exceed20msec, P(D>20msec)\n");
+  FILE *fptr;
+  fptr =fopen("P5_10.csv", "w+");
+  fprintf(fptr, "SEED, Arrival Count, Transmitted Packet Count, Service Fraction, Arrival Rate Layer 1, Arrival Rate Layer 2, Mean Delay, Mean Delay(S1),Mean Delay(S2),Mean Delay(S3), P(1,2)\n");
   /*
    * Declare and initialize our random number generator seeds defined in
    * simparameters.h
@@ -85,14 +85,17 @@ main(void)
     data.number_of_packets_processed = 0;
     data.accumulated_delay = 0.0;
     data.random_seed = random_seed;
-    data.number_exceed_20msec = 0;
  
     /* 
      * Create the packet buffer and transmission link, declared in main.h.
      */
 
-    data.buffer = fifoqueue_new();
-    data.link   = server_new();
+    data.buffer1 = fifoqueue_new();
+    data.link1   = server_new();
+    data.buffer2 = fifoqueue_new();
+    data.link2   = server_new();
+    data.buffer3 = fifoqueue_new();
+    data.link3   = server_new();
 
     /* 
      * Set the random number generator seed for this run.
@@ -105,7 +108,14 @@ main(void)
      */
 
     schedule_packet_arrival_event(simulation_run, 
-				  simulation_run_get_time(simulation_run));
+				  simulation_run_get_time(simulation_run),
+                  data.buffer1);
+    schedule_packet_arrival_event(simulation_run, 
+				  simulation_run_get_time(simulation_run)+1,
+                  data.buffer2);
+    schedule_packet_arrival_event(simulation_run, 
+				  simulation_run_get_time(simulation_run)+2,
+                  data.buffer3);
 
     /* 
      * Execute events until we are finished. 
@@ -124,19 +134,21 @@ main(void)
     Simulation_Run_Data_Ptr sim_data = (Simulation_Run_Data_Ptr) simulation_run_data(simulation_run);
     double xmtted_fraction = (double) sim_data->number_of_packets_processed /
         sim_data->arrival_count;
-    double exceed_fraction = (double) sim_data->number_exceed_20msec/sim_data->number_of_packets_processed;
-    fprintf(fpt,"%d, %ld, %ld, %.5f,%.3f,%.2f, %ld, %.5f\n", sim_data-> random_seed,
+    fprintf(fptr,"%d, %ld, %ld, %.5f,%.3f,%.3f,%.2f,%.2f,%.2f,%.2f, %.2f\n", sim_data-> random_seed,
                                             sim_data->arrival_count,
                                             sim_data->number_of_packets_processed,
                                             xmtted_fraction,
-                                            (double) PACKET_ARRIVAL_RATE,
+                                            (double) LAYER1_PACKET_ARRIVAL_RATE,
+                                            (double) LAYER2_PACKET_ARRIVAL_RATE,
                                             1e3*sim_data->accumulated_delay/sim_data->number_of_packets_processed,
-                                            sim_data->number_exceed_20msec,
-                                            exceed_fraction);
+                                            1e3*sim_data->accumulated_delay_switch1/sim_data->processed_switch1,
+                                            1e3*sim_data->accumulated_delay_switch2/sim_data->processed_switch2,
+                                            1e3*sim_data->accumulated_delay_switch3/sim_data->processed_switch3,
+                                            P_1_2);
 
     cleanup_memory(simulation_run);
   }
-  fclose(fpt);
+  fclose(fptr);
   getchar();   /* Pause before finishing. */
   return 0;
 }

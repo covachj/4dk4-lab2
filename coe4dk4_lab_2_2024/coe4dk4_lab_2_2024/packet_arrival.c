@@ -40,13 +40,13 @@
 
 long int
 schedule_packet_arrival_event(Simulation_Run_Ptr simulation_run,
-			      double event_time)
+			      double event_time, Fifoqueue_Ptr buffer)
 {
   Event event;
 
   event.description = "Packet Arrival";
   event.function = packet_arrival_event;
-  event.attachment = (void *) NULL;
+  event.attachment = (void *) buffer;
 
   return simulation_run_schedule_event(simulation_run, event, event_time);
 }
@@ -61,29 +61,49 @@ schedule_packet_arrival_event(Simulation_Run_Ptr simulation_run,
  */
 
 void
-packet_arrival_event(Simulation_Run_Ptr simulation_run, void * ptr)
+packet_arrival_event(Simulation_Run_Ptr simulation_run, void * buffer)
 {
   Simulation_Run_Data_Ptr data;
   Packet_Ptr new_packet;
+  Server_Ptr link;
+  double arrival_rate = LAYER2_PACKET_ARRIVAL_RATE;
 
   data = (Simulation_Run_Data_Ptr) simulation_run_data(simulation_run);
   data->arrival_count++;
 
   new_packet = (Packet_Ptr) xmalloc(sizeof(Packet));
   new_packet->arrive_time = simulation_run_get_time(simulation_run);
-  new_packet->service_time = get_packet_transmission_time();
+  new_packet->service_time = get_packet_transmission_time(2);
   new_packet->status = WAITING;
 
-  /* 
+ 
+  
+  /*Check which buffer is being targeted and set the appropriate link*/
+  if((Fifoqueue_Ptr) buffer == data->buffer1 ) {
+    link = data->link1;
+    arrival_rate = LAYER1_PACKET_ARRIVAL_RATE;
+    new_packet->service_time = get_packet_transmission_time(1);
+    new_packet->origin = 1;
+  }
+  if((Fifoqueue_Ptr) buffer == data->buffer2 ) {
+    link = data->link2;
+    new_packet->origin = 2; 
+  }
+  if((Fifoqueue_Ptr) buffer == data->buffer3 ) {
+    link = data->link3;
+    new_packet->origin = 3;
+  }
+
+ /* 
    * Start transmission if the data link is free. Otherwise put the packet into
    * the buffer.
    */
-
-  if(server_state(data->link) == BUSY) {
-    fifoqueue_put(data->buffer, (void*) new_packet);
-  } else {
-    start_transmission_on_link(simulation_run, new_packet, data->link);
-  }
+  
+  if(server_state(link) == BUSY) {
+        fifoqueue_put((Fifoqueue_Ptr) buffer, (void*) new_packet);
+    } else {
+        start_transmission_on_link(simulation_run, new_packet, link);
+    }
 
   /* 
    * Schedule the next packet arrival. Independent, exponentially distributed
@@ -91,9 +111,6 @@ packet_arrival_event(Simulation_Run_Ptr simulation_run, void * ptr)
    */
 
   schedule_packet_arrival_event(simulation_run,
-			simulation_run_get_time(simulation_run) +
-			exponential_generator((double) 1/PACKET_ARRIVAL_RATE));
+			simulation_run_get_time(simulation_run) + exponential_generator((double) 1/arrival_rate),
+            (Fifoqueue_Ptr) buffer);
 }
-
-
-

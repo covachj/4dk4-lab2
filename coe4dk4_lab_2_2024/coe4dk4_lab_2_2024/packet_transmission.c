@@ -66,6 +66,12 @@ end_packet_transmission_event(Simulation_Run_Ptr simulation_run, void * link)
 {
   Simulation_Run_Data_Ptr data;
   Packet_Ptr this_packet, next_packet;
+  Server_Ptr current_link;
+  Server_Ptr destination_link;
+  Fifoqueue_Ptr destination_buffer;
+  Fifoqueue_Ptr current_buffer;
+  
+  double rand_val;
 
   TRACE(printf("End Of Packet.\n"););
 
@@ -78,30 +84,69 @@ end_packet_transmission_event(Simulation_Run_Ptr simulation_run, void * link)
   this_packet = (Packet_Ptr) server_get(link);
 
   /* Collect statistics. */
-  data->number_of_packets_processed++;
+  if((Server_Ptr) link != data->link1) {
+    data->number_of_packets_processed++;
+    data->accumulated_delay += simulation_run_get_time(simulation_run) - this_packet->arrive_time;
+    if(this_packet->origin == 1) {
+        data->processed_switch1++;
+        data->accumulated_delay_switch1 += simulation_run_get_time(simulation_run) - this_packet->arrive_time;
+    }
+    if(this_packet->origin == 2) {
+        data->processed_switch2++;
+        data->accumulated_delay_switch2 += simulation_run_get_time(simulation_run) - this_packet->arrive_time;
+    }
+    if(this_packet->origin == 3) {
+        data->processed_switch3++;
+        data->accumulated_delay_switch3 += simulation_run_get_time(simulation_run) - this_packet->arrive_time;
+    }
 
-    //Check if delay exceeds 20msec, if yes increment the count to determine probability
-  double delay = simulation_run_get_time(simulation_run) - 
-    this_packet->arrive_time;
-    if(1e3*delay>20) data->number_exceed_20msec++;
+    /* This packet is done ... give the memory back. */
+    xfree((void *) this_packet);
+    if(link == data->link2){
+        current_buffer = data->buffer2;
+        current_link = data->link2;
+    }else{
+        current_buffer = data->buffer3;
+        current_link = data->link3;
+    }
 
-  data->accumulated_delay += delay;
+  }else {  
+    current_buffer = data->buffer1;
+    current_link = data->link1;
+    //Set new service time for layer 2
+    this_packet->service_time = get_packet_transmission_time(2);
+    //Determine Destination with RNG
+    rand_val = uniform_generator();
+    if(rand_val<= P_1_2) {
+        destination_link = data->link2;
+        destination_buffer = data->buffer2;
+    }else{
+        destination_link = data->link3;
+        destination_buffer = data->buffer3;
+    }
 
-  /* Output activity blip every so often. */
-  output_progress_msg_to_screen(simulation_run);
+    //Send packet to the destination
+    if(server_state(destination_link) == BUSY) {
+        fifoqueue_put(destination_buffer, (void*) this_packet);
+    } else {
+        start_transmission_on_link(simulation_run, this_packet, destination_link);
+    }
 
-  /* This packet is done ... give the memory back. */
-  xfree((void *) this_packet);
+   
+  }
 
-  /* 
+     /* 
    * See if there is are packets waiting in the buffer. If so, take the next one
    * out and transmit it immediately.
   */
 
-  if(fifoqueue_size(data->buffer) > 0) {
-    next_packet = (Packet_Ptr) fifoqueue_get(data->buffer);
-    start_transmission_on_link(simulation_run, next_packet, link);
+    if(fifoqueue_size(current_buffer) > 0) {
+        next_packet = (Packet_Ptr) fifoqueue_get(current_buffer);
+        start_transmission_on_link(simulation_run, next_packet, current_link);
   }
+  /* Output activity blip every so often. */
+  output_progress_msg_to_screen(simulation_run);
+
 }
 
 /*
@@ -132,9 +177,13 @@ start_transmission_on_link(Simulation_Run_Ptr simulation_run,
  */
 
 double
-get_packet_transmission_time(void)
+get_packet_transmission_time(int layer)
 {
-  return ((double) PACKET_XMT_TIME);
+    if(layer == 1) {
+        return ((double) LAYER1_PACKET_XMT_TIME);
+    }else{
+        return ((double) LAYER2_PACKET_XMT_TIME);
+    }
 }
 
 

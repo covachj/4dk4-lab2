@@ -40,7 +40,7 @@ void
 packet_arrival_event(Simulation_Run_Ptr, void*);
 
 long
-schedule_packet_arrival_event(Simulation_Run_Ptr, double);
+schedule_packet_arrival_event(Simulation_Run_Ptr, double, Fifoqueue_Ptr);
 
 /******************************************************************************/
 

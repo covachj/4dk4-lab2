@@ -30,18 +30,28 @@
 
 #include "simlib.h"
 #include "simparameters.h"
+#include <stdio.h>
 
 /******************************************************************************/
 
 typedef struct _simulation_run_data_ 
 {
-  Fifoqueue_Ptr buffer;
-  Server_Ptr link;
+  Fifoqueue_Ptr buffer1;
+  Server_Ptr link1;
+  Fifoqueue_Ptr buffer2;
+  Server_Ptr link2;
+  Fifoqueue_Ptr buffer3;
+  Server_Ptr link3;
   long int blip_counter;
   long int arrival_count;
   long int number_of_packets_processed;
+  long int processed_switch1;
+  long int processed_switch2;
+  long int processed_switch3;
   double accumulated_delay;
-  long int number_exceed_20msec;
+  double accumulated_delay_switch1;
+  double accumulated_delay_switch2;
+  double accumulated_delay_switch3;
   unsigned random_seed;
 } Simulation_Run_Data, * Simulation_Run_Data_Ptr;
 
@@ -53,6 +63,7 @@ typedef struct _packet_
   double service_time;
   int source_id;
   int destination_id;
+  int origin;
   Packet_Status status;
 } Packet, * Packet_Ptr;
 

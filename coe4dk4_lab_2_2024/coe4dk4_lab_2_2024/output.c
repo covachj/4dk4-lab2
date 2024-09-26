@@ -87,7 +87,7 @@ output_results(Simulation_Run_Ptr simulation_run)
   printf("Transmitted packet count  = %ld (Service Fraction = %.5f)\n",
 	 data->number_of_packets_processed, xmtted_fraction);
 
-  printf("Arrival rate = %.3f packets/second \n", (double) PACKET_ARRIVAL_RATE);
+  printf("Arrival rate = %.3f packets/second \n", (double) LAYER1_PACKET_ARRIVAL_RATE);
 
   printf("Mean Delay (msec) = %.2f \n",
 	 1e3*data->accumulated_delay/data->number_of_packets_processed);
